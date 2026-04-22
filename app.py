@@ -118,7 +118,16 @@ def clear_directory_contents(directory_path, keep_gitkeep=True):
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'message': 'Server is running'}), 200
+    video_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'videos')
+    audio_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'audios')
+
+    return jsonify({
+        'status': 'healthy',
+        'message': 'Server is running',
+        'ffmpeg_available': ffmpeg_available(),
+        'video_count': len([name for name in os.listdir(video_folder) if os.path.isfile(os.path.join(video_folder, name))]) if os.path.exists(video_folder) else 0,
+        'audio_count': len([name for name in os.listdir(audio_folder) if os.path.isfile(os.path.join(audio_folder, name))]) if os.path.exists(audio_folder) else 0
+    }), 200
 
 
 @app.route('/api/upload/video', methods=['POST'])

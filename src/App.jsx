@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -13,17 +13,58 @@ function randomResult() {
     ? Math.floor(Math.random() * 30) + 75
     : Math.floor(Math.random() * 40) + 20;
   const confidenceLevel = Math.floor(Math.random() * 25) + 75;
+  const facialScore = Math.floor(Math.random() * 35) + (isAuthentic ? 60 : 20);
+  const audioScore = Math.floor(Math.random() * 35) + (isAuthentic ? 62 : 18);
+  const temporalScore = Math.floor(Math.random() * 35) + (isAuthentic ? 58 : 18);
+  const artifactScore = Math.floor(Math.random() * 35) + (isAuthentic ? 61 : 15);
+  const authenticityRisk = isAuthentic ? Math.floor(Math.random() * 24) + 8 : Math.floor(Math.random() * 32) + 42;
+
+  const findings = isAuthentic
+    ? [
+        "No strong cross-modal mismatch detected.",
+        "Frame consistency remains stable across the sampled sequence.",
+        "Audio characteristics appear aligned with the visual timeline."
+      ]
+    : [
+        "Temporal irregularities suggest possible generated or altered frames.",
+        "Audio-visual mismatch detected in one or more sampled segments.",
+        "Artifacts and compression anomalies are above the expected baseline."
+      ];
+
+  const recommendations = isAuthentic
+    ? [
+        "Proceed with standard review workflow.",
+        "Archive the analysis report for audit tracking.",
+        "Re-run at higher FPS only if finer inspection is required."
+      ]
+    : [
+        "Escalate the asset for manual review.",
+        "Extract frames at higher FPS for segment-level inspection.",
+        "Cross-check the source file chain and submission metadata."
+      ];
 
   return {
     isAuthentic,
     authenticScore,
     confidenceLevel,
+    riskLevel: authenticityRisk,
+    subScores: {
+      facial: facialScore,
+      audio: audioScore,
+      temporal: temporalScore,
+      artifacts: artifactScore
+    },
     detections: {
       facial: isAuthentic ? Math.random() > 0.2 : Math.random() > 0.7,
       audio: isAuthentic ? Math.random() > 0.2 : Math.random() > 0.7,
       temporal: isAuthentic ? Math.random() > 0.2 : Math.random() > 0.7,
       artifacts: isAuthentic ? Math.random() > 0.2 : Math.random() > 0.7
-    }
+    },
+    findings,
+    recommendations,
+    summary: isAuthentic
+      ? "The sample appears coherent across video and audio channels with no dominant indicators of manipulation."
+      : "Multiple detection signals point to possible manipulation. A human review is recommended before acceptance."
   };
 }
 
@@ -48,6 +89,12 @@ export default function App() {
   const [extractFps, setExtractFps] = useState(25);
   const [isExtractingFrames, setIsExtractingFrames] = useState(false);
   const [frameExtraction, setFrameExtraction] = useState(null);
+  const [systemHealth, setSystemHealth] = useState({
+    api: "checking",
+    ffmpeg: "checking",
+    videos: 0,
+    audios: 0
+  });
 
   const canAnalyze = Boolean(videoUploaded || audioUploaded);
 
@@ -68,6 +115,48 @@ export default function App() {
     setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 3000);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSystemHealth = async () => {
+      try {
+        const response = await fetch(`${API_URL}/health`);
+        const data = await response.json();
+
+        if (cancelled) return;
+
+        setSystemHealth({
+          api: response.ok ? "online" : "offline",
+          ffmpeg: data.ffmpeg_available ? "available" : "missing",
+          videos: data.video_count ?? 0,
+          audios: data.audio_count ?? 0
+        });
+      } catch {
+        if (!cancelled) {
+          setSystemHealth({
+            api: "offline",
+            ffmpeg: "unknown",
+            videos: 0,
+            audios: 0
+          });
+        }
+      }
+    };
+
+    loadSystemHealth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const scrollToSection = (id) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
   const validateFile = (file, kind) => {
@@ -296,6 +385,10 @@ ${audioUploaded ? `- Audio: ${audioUploaded.original_name || audioUploaded.name}
 Analysis Date: ${new Date().toLocaleString()}
 Authenticity Score: ${result.authenticScore}%
 Confidence: ${result.confidenceLevel}%
+Risk Level: ${result.riskLevel}%
+
+SUMMARY:
+${result.summary}
 
 RESULTS:
 --------
@@ -303,6 +396,18 @@ Facial Analysis: ${result.detections.facial ? "Authentic" : "Manipulated"}
 Audio Analysis: ${result.detections.audio ? "Authentic" : "Manipulated"}
 Temporal Consistency: ${result.detections.temporal ? "Authentic" : "Manipulated"}
 Artifacts Detection: ${result.detections.artifacts ? "Authentic" : "Manipulated"}
+
+SUB-SCORES:
+- Facial: ${result.subScores.facial}%
+- Audio: ${result.subScores.audio}%
+- Temporal: ${result.subScores.temporal}%
+- Artifacts: ${result.subScores.artifacts}%
+
+FINDINGS:
+${result.findings.map((finding) => `- ${finding}`).join("\n")}
+
+RECOMMENDATIONS:
+${result.recommendations.map((recommendation) => `- ${recommendation}`).join("\n")}
 `;
 
     const link = document.createElement("a");
@@ -328,17 +433,51 @@ Artifacts Detection: ${result.detections.artifacts ? "Authentic" : "Manipulated"
     </span>
   );
 
+  const dashboardStatus = canAnalyze ? "Ready" : "Awaiting Upload";
+  const dashboardDate = new Date().toLocaleDateString();
+
   return (
     <div className="container">
       <header className="header">
+        <div className="topbar">
+          <div className="brand-pill">Forensics Console</div>
+          <div className="topbar-meta">
+            <span className="status-indicator">{dashboardStatus}</span>
+            <span className="status-date">{dashboardDate}</span>
+          </div>
+        </div>
         <div className="header-content">
           <h1 className="title">Deepfake Detection</h1>
           <p className="subtitle">Advanced AI-powered analysis for video and audio authentication</p>
         </div>
+        <div className="quick-nav">
+          <button type="button" onClick={() => scrollToSection("upload-section")}>Upload</button>
+          <button type="button" onClick={() => scrollToSection("results-section")}>Results</button>
+          <button type="button" onClick={() => scrollToSection("footer")}>System</button>
+        </div>
       </header>
 
+      <section className="kpi-strip" aria-label="System overview">
+        <div className="kpi-card">
+          <p className="kpi-label">Pipeline Status</p>
+          <p className="kpi-value">{dashboardStatus}</p>
+        </div>
+        <div className="kpi-card">
+          <p className="kpi-label">API Health</p>
+          <p className="kpi-value">{systemHealth.api}</p>
+        </div>
+        <div className="kpi-card">
+          <p className="kpi-label">FFmpeg</p>
+          <p className="kpi-value">{systemHealth.ffmpeg}</p>
+        </div>
+        <div className="kpi-card">
+          <p className="kpi-label">Stored Media</p>
+          <p className="kpi-value">{systemHealth.videos + systemHealth.audios}</p>
+        </div>
+      </section>
+
       <main className="main-content">
-        <section className="upload-section">
+        <section className="upload-section" id="upload-section">
           <div className="section-title">
             <h2>Upload Files</h2>
           </div>
@@ -492,7 +631,7 @@ Artifacts Detection: ${result.detections.artifacts ? "Authentic" : "Manipulated"
         </section>
 
         {showResults && (
-          <section className="results-section">
+          <section className="results-section" id="results-section">
             <div className="section-title">
               <h2>Analysis Results</h2>
             </div>
@@ -515,6 +654,7 @@ Artifacts Detection: ${result.detections.artifacts ? "Authentic" : "Manipulated"
                     </div>
                     <div className="score-description">
                       <p>{scoreDescription}</p>
+                      <p className="analysis-summary">{result.summary}</p>
                     </div>
                   </div>
                 </div>
@@ -525,27 +665,86 @@ Artifacts Detection: ${result.detections.artifacts ? "Authentic" : "Manipulated"
                     <div className="confidence-fill" style={{ width: `${result.confidenceLevel}%` }} />
                   </div>
                   <p className="confidence-text">Confidence: {result.confidenceLevel}%</p>
+                  <div className="mini-metric-row">
+                    <div className="mini-metric">
+                      <span>Risk Level</span>
+                      <strong>{result.riskLevel}%</strong>
+                    </div>
+                    <div className="mini-metric">
+                      <span>Decision Bias</span>
+                      <strong>{result.isAuthentic ? "Authentic leaning" : "Deepfake leaning"}</strong>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="result-card">
                   <h3>Detection Results</h3>
-                  <div className="detection-grid">
-                    <div className="detection-item">
-                      <span>Facial Analysis</span>
-                      {renderDetectionBadge(result.detections.facial)}
+                  <div className="detection-table" role="table" aria-label="Detection summary">
+                    <div className="detection-row detection-row-head" role="row">
+                      <span role="columnheader">Signal</span>
+                      <span role="columnheader">Assessment</span>
                     </div>
-                    <div className="detection-item">
-                      <span>Audio Analysis</span>
-                      {renderDetectionBadge(result.detections.audio)}
+                    <div className="detection-row" role="row">
+                      <span role="cell">Facial Analysis</span>
+                      <span role="cell">{renderDetectionBadge(result.detections.facial)}</span>
                     </div>
-                    <div className="detection-item">
-                      <span>Temporal Consistency</span>
-                      {renderDetectionBadge(result.detections.temporal)}
+                    <div className="detection-row" role="row">
+                      <span role="cell">Audio Analysis</span>
+                      <span role="cell">{renderDetectionBadge(result.detections.audio)}</span>
                     </div>
-                    <div className="detection-item">
-                      <span>Artifacts Detection</span>
-                      {renderDetectionBadge(result.detections.artifacts)}
+                    <div className="detection-row" role="row">
+                      <span role="cell">Temporal Consistency</span>
+                      <span role="cell">{renderDetectionBadge(result.detections.temporal)}</span>
                     </div>
+                    <div className="detection-row" role="row">
+                      <span role="cell">Artifacts Detection</span>
+                      <span role="cell">{renderDetectionBadge(result.detections.artifacts)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="result-card">
+                  <h3>Signal Breakdown</h3>
+                  <div className="signal-grid">
+                    <div className="signal-card">
+                      <span>Facial Consistency</span>
+                      <strong>{result.subScores.facial}%</strong>
+                      <div className="signal-track"><div style={{ width: `${result.subScores.facial}%` }} /></div>
+                    </div>
+                    <div className="signal-card">
+                      <span>Audio Fidelity</span>
+                      <strong>{result.subScores.audio}%</strong>
+                      <div className="signal-track"><div style={{ width: `${result.subScores.audio}%` }} /></div>
+                    </div>
+                    <div className="signal-card">
+                      <span>Temporal Integrity</span>
+                      <strong>{result.subScores.temporal}%</strong>
+                      <div className="signal-track"><div style={{ width: `${result.subScores.temporal}%` }} /></div>
+                    </div>
+                    <div className="signal-card">
+                      <span>Artifact Suppression</span>
+                      <strong>{result.subScores.artifacts}%</strong>
+                      <div className="signal-track"><div style={{ width: `${result.subScores.artifacts}%` }} /></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="result-card analysis-columns">
+                  <div>
+                    <h3>Findings</h3>
+                    <ul className="analysis-list">
+                      {result.findings.map((finding) => (
+                        <li key={finding}>{finding}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h3>Recommendations</h3>
+                    <ul className="analysis-list analysis-list-accent">
+                      {result.recommendations.map((recommendation) => (
+                        <li key={recommendation}>{recommendation}</li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
 
@@ -582,7 +781,7 @@ Artifacts Detection: ${result.detections.artifacts ? "Authentic" : "Manipulated"
         )}
       </main>
 
-      <footer className="footer">
+      <footer className="footer" id="footer">
         <p>Deepfake Detection System</p>
       </footer>
 
