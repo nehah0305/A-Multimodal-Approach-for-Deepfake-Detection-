@@ -1,223 +1,90 @@
-# Deepfake Detection Dashboard
+# Deepfake Detection Dashboard (React + Flask)
 
-A modern, interactive web-based dashboard with full backend support for analyzing video and audio files to detect deepfakes and manipulated content.
+This project is now fully converted to a React frontend (Vite) with a Flask backend API for video/audio upload.
 
-## 🎯 Key Features
+## Stack
 
-✨ **Full-Stack Application**
-- Frontend: Interactive HTML/CSS/JavaScript dashboard
-- Backend: Python Flask REST API
-- Real file upload and storage
-- Complete API documentation
+- Frontend: React 18 + Vite
+- Backend: Flask
+- API: REST endpoints under /api
 
-📁 **Media Upload & Management**
-- Drag-and-drop file upload (both separate and combined)
-- Support for multiple video formats (MP4, AVI, MOV, WMV)
-- Support for multiple audio formats (MP3, WAV, M4A, FLAC)
-- File size validation (max 100MB per file)
-- Automatic file organization and timestamping
-- File listing and deletion endpoints
-
-🔍 **Analysis Features**
-- Authenticity score with visual indicators
-- Confidence level bar
-- Multi-factor detection results:
-  - Facial Analysis
-  - Audio Analysis
-  - Temporal Consistency
-  - Artifacts Detection
-- Detailed analysis reports
-- Downloadable results
-
-🚀 **Backend API**
-- RESTful API with comprehensive endpoints
-- File upload/download management
-- Statistics and monitoring
-- CORS-enabled for frontend integration
-- Error handling and validation
-- Ready for ML model integration
-
-## 📋 Quick Start
-
-### Prerequisites
-- Python 3.8+ ([Download](https://www.python.org/))
-- Any modern web browser
-
-### Installation (5 minutes)
-
-1. **Install Dependencies**
-   ```powershell
-   cd "path/to/project"
-   pip install -r requirements.txt
-   ```
-
-2. **Start Backend Server**
-   ```powershell
-   python app.py
-   ```
-   Or use the quick start script:
-   ```powershell
-   .\start-server.bat
-   ```
-
-3. **Open Dashboard**
-   - Double-click `index.html` or
-   - Open in browser: `file:///path/to/index.html`
-
-4. **Start Analyzing!**
-   - Upload video/audio files
-   - Click Analyze
-   - View results and download reports
-
-## 📂 Project Structure
+## Project Structure
 
 ```
 A-Multimodal-Approach-for-Deepfake-Detection-/
-├── index.html              # Frontend dashboard
-├── styles.css              # Styling (responsive design)
-├── script.js               # Frontend JavaScript (with API integration)
-├── app.py                  # Backend Flask server
-├── requirements.txt        # Python dependencies
-├── start-server.bat        # Quick start script (Windows)
-├── test_api.py            # API testing script
-├── uploads/               # File storage (auto-created)
-│   ├── videos/           # Uploaded video files
-│   ├── audios/           # Uploaded audio files
-│   └── results/          # Analysis results
-├── README.md             # This file
-├── SETUP.md              # Detailed setup guide
-└── API_DOCS.md           # API documentation
+├── index.html
+├── package.json
+├── vite.config.js
+├── src/
+│   ├── App.jsx
+│   ├── App.css
+│   ├── main.jsx
+│   └── index.css
+├── app.py
+├── requirements.txt
+├── start-server.bat
+├── API_DOCS.md
+└── test_api.py
 ```
 
-## 🎮 How to Use
+## Run Backend
 
-### Uploading Files
-
-1. **Video Upload**
-   - Click the video upload area or drag a video file
-   - Supported formats: MP4, AVI, MOV, WMV
-   - Max size: 100MB
-
-2. **Audio Upload**
-   - Click the audio upload area or drag an audio file
-   - Supported formats: MP3, WAV, M4A, FLAC
-   - Max size: 100MB
-
-### Running Analysis
-
-1. Upload one or both files (video/audio)
-2. Click the **Analyze** button
-3. Wait for analysis to complete
-4. View comprehensive results
-
-### Results Display
-
-- **Authenticity Score**: Percentage-based genuineness indicator
-- **Confidence Level**: How confident the analysis is
-- **Detection Results**: Individual metrics for different analysis types
-- **Detailed Report**: In-depth findings and recommendations
-
-### Download & Export
-
-- Download analysis as text report
-- Clear and analyze another file
-- File history is maintained on server
-
-## 🔌 API Endpoints
-
-All endpoints are documented in [API_DOCS.md](API_DOCS.md)
-
-### Core Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/health` | Health check |
-| `POST` | `/api/upload/video` | Upload video |
-| `POST` | `/api/upload/audio` | Upload audio |
-| `POST` | `/api/upload/both` | Upload both |
-| `GET` | `/api/files/list` | List all files |
-| `POST` | `/api/files/delete` | Delete file |
-| `GET` | `/api/stats` | Get statistics |
-| `POST` | `/api/analyze` | Start analysis |
-
-See [API_DOCS.md](API_DOCS.md) for detailed endpoint documentation.
-
-## 🧪 Testing
-
-Run the API test suite to verify everything is working:
+1. Install Python dependencies:
 
 ```powershell
-python test_api.py
+pip install -r requirements.txt
 ```
 
-This will test all endpoints and verify the API is functioning correctly.
+2. Start Flask API:
 
-## 📚 Documentation
+```powershell
+python app.py
+```
 
-- **[SETUP.md](SETUP.md)** - Detailed installation and setup guide
-- **[API_DOCS.md](API_DOCS.md)** - Complete API reference
-- **[README.md](README.md)** - This file
+Backend runs at http://localhost:5000.
 
-## 🎨 User Interface
+## Run Frontend
 
-- Modern gradient design with purple/pink color scheme
-- Fully responsive (desktop, tablet, mobile)
-- Smooth animations and transitions
-- Toast notifications for user feedback
-- Loading indicators for file uploads
-- Real-time file preview
+1. Install Node dependencies:
 
-## ⚙️ Supported Formats
+```powershell
+npm install
+```
 
-### Video
-- MP4 (.mp4)
-- AVI (.avi)  
-- MOV (.mov)
-- WMV (.wmv)
+2. Start React dev server:
 
-### Audio
-- MP3 (.mp3)
-- WAV (.wav)
-- M4A (.m4a)
-- FLAC (.flac)
+```powershell
+npm run dev
+```
 
-**File Size Limit:** 100MB per file
+Frontend runs at http://localhost:5173.
 
-## 🚧 Troubleshooting
+## Environment (Optional)
 
-### Server Connection Issues
-- Ensure Flask is running: `python app.py`
-- Check server is on `http://localhost:5000`
-- Verify no firewall blocking port 5000
+To change API URL, set VITE_API_URL in a .env file:
 
-### File Upload Fails
-- Verify file format is supported
-- Check file size is under 100MB
-- Ensure `uploads` folder exists with write permissions
+```
+VITE_API_URL=http://localhost:5000/api
+```
 
-### Python Not Found
-- Install Python from [python.org](https://www.python.org/)
-- Add to PATH during installation
-- Restart terminal after installation
+## Features
 
-See [SETUP.md](SETUP.md) for more troubleshooting tips.
+- Separate video and audio upload zones
+- File validation (format and max 100MB)
+- Upload/delete via Flask API
+- Simulated analysis result cards
+- Downloadable report
 
-## 🔮 Future Enhancements
+## API
 
-1. **ML Model Integration**
-   - Integrate your deepfake detection ML models
-   - Real-time analysis results
-   - Custom model selection
+Core endpoints used by React:
 
-2. **Advanced Features**
-   - User authentication
-   - File history and analytics
-   - Batch processing
-   - Real-time progress updates (WebSocket)
+- GET /api/health
+- POST /api/upload/video
+- POST /api/upload/audio
+- POST /api/files/delete
 
-3. **Infrastructure**
-   - Cloud storage integration (AWS S3, Azure)
-   - Database for results storage
+See [API_DOCS.md](API_DOCS.md) for full backend endpoint details.
    - Rate limiting and API keys
    - Production-grade deployment
 

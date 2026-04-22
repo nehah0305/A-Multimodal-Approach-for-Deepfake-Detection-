@@ -4,23 +4,28 @@
 
 ```
 A-Multimodal-Approach-for-Deepfake-Detection-/
-├── index.html              # Frontend dashboard
-├── styles.css              # Styling
-├── script.js               # Frontend JavaScript
-├── app.py                  # Backend Flask server
-├── requirements.txt        # Python dependencies
-├── uploads/               # File storage (created automatically)
-│   ├── videos/           # Uploaded video files
-│   ├── audios/           # Uploaded audio files
-│   └── results/          # Analysis results
-└── README.md             # Documentation
+├── index.html
+├── package.json
+├── vite.config.js
+├── src/
+│   ├── App.jsx
+│   ├── App.css
+│   ├── main.jsx
+│   └── index.css
+├── app.py
+├── requirements.txt
+├── uploads/
+│   ├── videos/
+│   ├── audios/
+│   └── results/
+└── README.md
 ```
 
 ## Prerequisites
 
-- **Python 3.8+** - Download from [python.org](https://www.python.org/)
-- **pip** - Usually comes with Python
-- **Any modern web browser** - Chrome, Firefox, Safari, or Edge
+- Python 3.8+
+- Node.js 18+
+- npm
 
 ## Installation & Setup
 
@@ -62,13 +67,19 @@ Max file size: 100MB
  * Running on http://localhost:5000
 ```
 
-### Step 3: Open the Dashboard
+### Step 3: Install Frontend Dependencies
 
-1. Open your web browser
-2. Navigate to the project folder and open **index.html**
-3. Or open directly: `file:///c:/Users/nehah/OneDrive/Desktop/MAJOR PROJECT/A-Multimodal-Approach-for-Deepfake-Detection-/index.html`
+```powershell
+npm install
+```
 
-The dashboard should now be ready to use!
+### Step 4: Start React Frontend
+
+```powershell
+npm run dev
+```
+
+Open http://localhost:5173 in your browser.
 
 ## How to Use
 
