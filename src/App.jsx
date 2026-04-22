@@ -634,16 +634,16 @@ export default function App() {
           <p className="kpi-value">{dashboardStatus}</p>
         </div>
         <div className="kpi-card">
-          <p className="kpi-label">API Health</p>
-          <p className="kpi-value">{systemHealth.api}</p>
+          <p className="kpi-label">Video Assets</p>
+          <p className="kpi-value">{videoUploaded ? 1 : 0}</p>
         </div>
         <div className="kpi-card">
-          <p className="kpi-label">FFmpeg</p>
-          <p className="kpi-value">{systemHealth.ffmpeg}</p>
+          <p className="kpi-label">Audio Assets</p>
+          <p className="kpi-value">{audioUploaded ? 1 : 0}</p>
         </div>
         <div className="kpi-card">
-          <p className="kpi-label">Stored Media</p>
-          <p className="kpi-value">{systemHealth.videos + systemHealth.audios}</p>
+          <p className="kpi-label">Extracted Frames</p>
+          <p className="kpi-value">{frameExtraction?.frame_count ?? 0}</p>
         </div>
       </section>
 
