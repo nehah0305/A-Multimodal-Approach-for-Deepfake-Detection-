@@ -241,6 +241,47 @@ export default function App() {
     }
   };
 
+  const cleanupVideosAndFrames = async () => {
+    const shouldClean = window.confirm(
+      "This will delete all uploaded videos and all extracted frame folders. Do you want to continue?"
+    );
+
+    if (!shouldClean) {
+      return;
+    }
+
+    setUploadLoading("Cleaning uploaded videos and extracted frames...");
+
+    try {
+      const response = await fetch(`${API_URL}/files/cleanup/video-and-frames`, {
+        method: "POST"
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to clean videos and frames");
+      }
+
+      setVideoFile(null);
+      setVideoUploaded(null);
+      setFrameExtraction(null);
+      setShowResults(false);
+
+      const videosDeleted = data.cleaned?.videos?.files_deleted ?? 0;
+      const frameFilesDeleted = data.cleaned?.frames?.files_deleted ?? 0;
+      const frameFoldersDeleted = data.cleaned?.frames?.directories_deleted ?? 0;
+
+      addToast(
+        `Cleanup complete. Videos removed: ${videosDeleted}, frame files removed: ${frameFilesDeleted}, frame folders removed: ${frameFoldersDeleted}`,
+        "success"
+      );
+    } catch (error) {
+      addToast(error.message, "error");
+    } finally {
+      setUploadLoading("");
+    }
+  };
+
   const downloadReport = () => {
     if (!result) return;
 
@@ -371,6 +412,9 @@ Artifacts Detection: ${result.detections.artifacts ? "Authentic" : "Manipulated"
                     disabled={isExtractingFrames}
                   >
                     {isExtractingFrames ? "Extracting..." : "Extract Frames"}
+                  </button>
+                  <button className="btn btn-secondary" type="button" onClick={cleanupVideosAndFrames}>
+                    Clean Videos and Frames
                   </button>
                 </div>
 

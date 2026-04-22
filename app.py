@@ -92,6 +92,29 @@ def resolve_ffmpeg_binary():
     return None
 
 
+def clear_directory_contents(directory_path, keep_gitkeep=True):
+    """Delete all files and subfolders inside a directory."""
+    deleted_files = 0
+    deleted_dirs = 0
+
+    if not os.path.exists(directory_path):
+        return {'files_deleted': deleted_files, 'directories_deleted': deleted_dirs}
+
+    with os.scandir(directory_path) as entries:
+        for entry in entries:
+            if keep_gitkeep and entry.name == '.gitkeep':
+                continue
+
+            if entry.is_file() or entry.is_symlink():
+                os.remove(entry.path)
+                deleted_files += 1
+            elif entry.is_dir():
+                shutil.rmtree(entry.path)
+                deleted_dirs += 1
+
+    return {'files_deleted': deleted_files, 'directories_deleted': deleted_dirs}
+
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""
@@ -354,6 +377,29 @@ def delete_file():
     
     except Exception as e:
         return jsonify({'error': f'Failed to delete file: {str(e)}'}), 500
+
+
+@app.route('/api/files/cleanup/video-and-frames', methods=['POST'])
+def cleanup_video_and_frames():
+    """Delete all uploaded videos and extracted frame outputs."""
+    try:
+        video_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'videos')
+        frames_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'frames')
+
+        cleaned_videos = clear_directory_contents(video_folder)
+        cleaned_frames = clear_directory_contents(frames_folder)
+
+        return jsonify({
+            'success': True,
+            'message': 'Uploaded videos and extracted frames cleaned successfully',
+            'cleaned': {
+                'videos': cleaned_videos,
+                'frames': cleaned_frames
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to clean videos and frames: {str(e)}'}), 500
 
 
 @app.route('/api/files/<file_type>/<filename>', methods=['GET'])
