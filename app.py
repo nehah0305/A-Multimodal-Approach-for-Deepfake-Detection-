@@ -6,6 +6,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 import mimetypes
+import subprocess
+import shutil
 
 app = Flask(__name__)
 CORS(app)
@@ -21,6 +23,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_FOLDER, 'videos'), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_FOLDER, 'audios'), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_FOLDER, 'results'), exist_ok=True)
+os.makedirs(os.path.join(UPLOAD_FOLDER, 'frames'), exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
@@ -56,6 +59,11 @@ def get_file_info(filepath):
         'created_at': created_time.isoformat(),
         'path': filepath
     }
+
+
+def ffmpeg_available():
+    """Check if ffmpeg binary is available in PATH."""
+    return shutil.which('ffmpeg') is not None
 
 
 @app.route('/api/health', methods=['GET'])
@@ -374,6 +382,93 @@ def analyze_files():
     
     except Exception as e:
         return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
+
+
+@app.route('/api/video/extract-frames', methods=['POST'])
+def extract_video_frames():
+    """Extract PNG frames from an uploaded video using FFmpeg at fixed FPS."""
+    try:
+        data = request.get_json() or {}
+        video_filename = data.get('video_filename')
+        fps = data.get('fps', 25)
+
+        if not video_filename:
+            return jsonify({'error': 'video_filename is required'}), 400
+
+        try:
+            fps = float(fps)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'fps must be a valid number'}), 400
+
+        if fps <= 0:
+            return jsonify({'error': 'fps must be greater than 0'}), 400
+
+        # Limit to practical extraction range to avoid accidental overload.
+        if fps > 120:
+            return jsonify({'error': 'fps must be less than or equal to 120'}), 400
+
+        if not ffmpeg_available():
+            return jsonify({
+                'error': 'FFmpeg is not installed or not available in PATH'
+            }), 500
+
+        video_path = os.path.join(app.config['UPLOAD_FOLDER'], 'videos', video_filename)
+        if not os.path.exists(video_path):
+            return jsonify({'error': 'Video file not found'}), 404
+
+        video_stem = Path(video_filename).stem
+        run_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_folder_name = f"{video_stem}_{run_id}"
+        output_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'frames', output_folder_name)
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_pattern = os.path.join(output_dir, 'frame_%06d.png')
+
+        # Keep spatial features intact by avoiding scale/crop filters.
+        # PNG is lossless, so quality is preserved frame-by-frame.
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-hide_banner',
+            '-loglevel', 'error',
+            '-i', video_path,
+            '-vf', f'fps={fps}',
+            '-start_number', '0',
+            output_pattern
+        ]
+
+        run = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+        if run.returncode != 0:
+            return jsonify({
+                'error': 'FFmpeg frame extraction failed',
+                'details': run.stderr.strip() or 'Unknown FFmpeg error'
+            }), 500
+
+        frames = sorted(
+            [name for name in os.listdir(output_dir) if name.lower().endswith('.png')]
+        )
+
+        if not frames:
+            return jsonify({
+                'error': 'No frames were extracted. Check input video and ffmpeg setup.'
+            }), 500
+
+        return jsonify({
+            'success': True,
+            'message': 'Frames extracted successfully',
+            'extraction': {
+                'video_filename': video_filename,
+                'fps': fps,
+                'format': 'png',
+                'frame_count': len(frames),
+                'output_folder': output_folder_name,
+                'output_path': output_dir,
+                'first_frame': frames[0],
+                'last_frame': frames[-1]
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Frame extraction failed: {str(e)}'}), 500
 
 
 @app.route('/api/stats', methods=['GET'])
