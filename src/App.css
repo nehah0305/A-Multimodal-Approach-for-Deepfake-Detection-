@@ -187,6 +187,63 @@ body {
   color: var(--text-primary);
 }
 
+.frame-extract-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.frame-extract-header h4 {
+  margin-bottom: 6px;
+}
+
+.frame-extract-header p {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  margin-bottom: 12px;
+}
+
+.frame-extract-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.frame-extract-controls label {
+  font-weight: 600;
+}
+
+.frame-extract-controls input {
+  width: 110px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.95rem;
+}
+
+.frame-extract-controls .btn {
+  min-width: 160px;
+  flex: 0;
+}
+
+.frame-extract-result {
+  margin-top: 14px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 12px;
+}
+
+.frame-extract-result p {
+  margin-bottom: 6px;
+}
+
+.frame-extract-result p:last-child {
+  margin-bottom: 0;
+}
+
 .analyze-section {
   display: flex;
 }
@@ -473,5 +530,15 @@ body {
 
   .detection-grid {
     grid-template-columns: 1fr;
+  }
+
+  .frame-extract-controls {
+    align-items: stretch;
+  }
+
+  .frame-extract-controls input,
+  .frame-extract-controls .btn {
+    width: 100%;
+    min-width: auto;
   }
 }

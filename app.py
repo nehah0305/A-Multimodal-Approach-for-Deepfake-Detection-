@@ -63,7 +63,33 @@ def get_file_info(filepath):
 
 def ffmpeg_available():
     """Check if ffmpeg binary is available in PATH."""
-    return shutil.which('ffmpeg') is not None
+    return resolve_ffmpeg_binary() is not None
+
+
+def resolve_ffmpeg_binary():
+    """Resolve ffmpeg binary path from env, PATH, or common WinGet location."""
+    env_binary = os.getenv('FFMPEG_BINARY')
+    if env_binary and os.path.isfile(env_binary):
+        return env_binary
+
+    for binary_name in ('ffmpeg', 'ffmpeg.exe'):
+        resolved = shutil.which(binary_name)
+        if resolved:
+            return resolved
+
+    local_app_data = os.getenv('LOCALAPPDATA')
+    if local_app_data:
+        winget_packages_dir = Path(local_app_data) / 'Microsoft' / 'WinGet' / 'Packages'
+        if winget_packages_dir.exists():
+            candidates = sorted(
+                winget_packages_dir.glob('Gyan.FFmpeg_*/*/bin/ffmpeg.exe'),
+                key=lambda path: path.stat().st_mtime,
+                reverse=True
+            )
+            if candidates:
+                return str(candidates[0])
+
+    return None
 
 
 @app.route('/api/health', methods=['GET'])
@@ -407,7 +433,8 @@ def extract_video_frames():
         if fps > 120:
             return jsonify({'error': 'fps must be less than or equal to 120'}), 400
 
-        if not ffmpeg_available():
+        ffmpeg_binary = resolve_ffmpeg_binary()
+        if not ffmpeg_binary:
             return jsonify({
                 'error': 'FFmpeg is not installed or not available in PATH'
             }), 500
@@ -427,7 +454,7 @@ def extract_video_frames():
         # Keep spatial features intact by avoiding scale/crop filters.
         # PNG is lossless, so quality is preserved frame-by-frame.
         ffmpeg_cmd = [
-            'ffmpeg',
+            ffmpeg_binary,
             '-hide_banner',
             '-loglevel', 'error',
             '-i', video_path,

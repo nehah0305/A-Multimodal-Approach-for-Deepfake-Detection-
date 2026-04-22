@@ -45,6 +45,9 @@ export default function App() {
   const [showResults, setShowResults] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
+  const [extractFps, setExtractFps] = useState(25);
+  const [isExtractingFrames, setIsExtractingFrames] = useState(false);
+  const [frameExtraction, setFrameExtraction] = useState(null);
 
   const canAnalyze = Boolean(videoUploaded || audioUploaded);
 
@@ -167,6 +170,7 @@ export default function App() {
     }
     setVideoFile(null);
     setVideoUploaded(null);
+    setFrameExtraction(null);
     setShowResults(false);
   };
 
@@ -194,6 +198,47 @@ export default function App() {
       setResult(randomResult());
       setIsAnalyzing(false);
     }, delay);
+  };
+
+  const extractFrames = async () => {
+    if (!videoUploaded?.name) {
+      addToast("Please upload a video file first", "warning");
+      return;
+    }
+
+    const fpsValue = Number(extractFps);
+    if (!Number.isFinite(fpsValue) || fpsValue <= 0 || fpsValue > 120) {
+      addToast("FPS must be a number between 1 and 120", "error");
+      return;
+    }
+
+    setIsExtractingFrames(true);
+    setUploadLoading("Extracting video frames...");
+
+    try {
+      const response = await fetch(`${API_URL}/video/extract-frames`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          video_filename: videoUploaded.name,
+          fps: fpsValue
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to extract frames");
+      }
+
+      setFrameExtraction(data.extraction || null);
+      addToast("Frames extracted successfully", "success");
+    } catch (error) {
+      setFrameExtraction(null);
+      addToast(error.message, "error");
+    } finally {
+      setIsExtractingFrames(false);
+      setUploadLoading("");
+    }
   };
 
   const downloadReport = () => {
@@ -230,6 +275,7 @@ Artifacts Detection: ${result.detections.artifacts ? "Authentic" : "Manipulated"
     await clearVideo();
     await clearAudio();
     setResult(null);
+    setFrameExtraction(null);
     setShowResults(false);
     setIsAnalyzing(false);
     addToast("All files cleared", "info");
@@ -298,6 +344,52 @@ Artifacts Detection: ${result.detections.artifacts ? "Authentic" : "Manipulated"
                     &times;
                   </button>
                 </div>
+              </div>
+            )}
+
+            {videoUploaded && (
+              <div className="frame-extract-card">
+                <div className="frame-extract-header">
+                  <h4>Frame Extraction</h4>
+                  <p>Frames are saved under uploads/frames/&lt;video_name_timestamp&gt;/</p>
+                </div>
+
+                <div className="frame-extract-controls">
+                  <label htmlFor="extract-fps">FPS</label>
+                  <input
+                    id="extract-fps"
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={extractFps}
+                    onChange={(event) => setExtractFps(event.target.value)}
+                  />
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={extractFrames}
+                    disabled={isExtractingFrames}
+                  >
+                    {isExtractingFrames ? "Extracting..." : "Extract Frames"}
+                  </button>
+                </div>
+
+                {frameExtraction && (
+                  <div className="frame-extract-result">
+                    <p>
+                      <strong>Frame count:</strong> {frameExtraction.frame_count}
+                    </p>
+                    <p>
+                      <strong>Output folder:</strong> uploads/frames/{frameExtraction.output_folder}
+                    </p>
+                    <p>
+                      <strong>First frame:</strong> {frameExtraction.first_frame}
+                    </p>
+                    <p>
+                      <strong>Last frame:</strong> {frameExtraction.last_frame}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
