@@ -1,0 +1,30 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Node artifacts
+node_modules/
+dist/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Uploaded/generated media should never be committed
+uploads/**
+!uploads/
+!uploads/audios/
+!uploads/videos/
+!uploads/frames/
+!uploads/results/
+!uploads/kaggle_dataset/
+!uploads/**/.gitkeep
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
