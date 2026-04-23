@@ -73,10 +73,52 @@ python validate_dataset.py
 
 ## Next Steps After Validation
 
-Once the dataset is prepared, you'll build:
-1. **Preprocessing pipeline** - Frame extraction and normalization
-2. **Training script** - Model training with ResNet18 baseline
-3. **Evaluation script** - Metrics and threshold tuning
+Now run the training pipeline in this order:
+
+### 1) Preprocess videos into tensors
+
+```bash
+python preprocess_videos.py --split all
+```
+
+This creates:
+- `data/train_preprocessed.csv`
+- `data/val_preprocessed.csv`
+- `data/test_preprocessed.csv`
+- frame tensors under `preprocessed/train`, `preprocessed/val`, `preprocessed/test`
+
+Quick sanity run (small subset):
+
+```bash
+python preprocess_videos.py --split train --max-videos 50
+python preprocess_videos.py --split val --max-videos 20
+python preprocess_videos.py --split test --max-videos 20
+```
+
+### 2) Train baseline model
+
+```bash
+python train_baseline.py
+```
+
+Artifacts:
+- `models/best_baseline.pt`
+- `models/train_history.json`
+
+### 3) Evaluate on held-out test set
+
+```bash
+python evaluate_model.py
+```
+
+Artifacts:
+- `models/test_metrics.json`
+
+### 4) Predict one video (manual check)
+
+```bash
+python predict_video.py "path/to/video.mp4"
+```
 
 ## File Structure
 
@@ -86,7 +128,7 @@ ml_pipeline/
 ├── build_manifest.py         # Create unified dataset manifest
 ├── create_splits.py          # Identity-safe train/val/test split
 ├── validate_dataset.py       # Check dataset integrity
-├── data/                     # Generated CSVs (train/val/test splits)
+├── data/                     # Generated CSVs (splits + preprocessed manifests)
 ├── preprocessed/             # Will store preprocessed frames
 ├── models/                   # Will store trained checkpoints
 └── logs/                     # Training logs

@@ -97,14 +97,14 @@ export default function App() {
     audios: 0
   });
 
-  const canAnalyze = Boolean(videoUploaded || audioUploaded);
+  const canAnalyze = Boolean(videoUploaded);
 
   const scoreDescription = useMemo(() => {
     if (!result) return "";
-    if (result.authenticScore >= 75) {
+    if (result.label === "REAL") {
       return "Likely Authentic: The media appears to be genuine with high confidence.";
     }
-    if (result.authenticScore >= 50) {
+    if (result.label === "FAKE") {
       return "Suspicious: Some signs of manipulation detected. Further review recommended.";
     }
     return "Likely Deepfake: Strong indicators of manipulated content detected.";
@@ -275,7 +275,7 @@ export default function App() {
 
   const analyze = async () => {
     if (!canAnalyze) {
-      addToast("Please upload at least one file", "warning");
+      addToast("Please upload a video file first", "warning");
       return;
     }
 
@@ -283,11 +283,30 @@ export default function App() {
     setIsAnalyzing(true);
     setResult(null);
 
-    const delay = Math.random() * 2000 + 2000;
-    setTimeout(() => {
-      setResult(randomResult());
+    try {
+      const response = await fetch(`${API_URL}/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          video: videoUploaded?.name,
+          audio: audioUploaded?.name || null
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to analyze media");
+      }
+
+      setResult(data.analysis);
+      addToast("Analysis completed successfully", "success");
+    } catch (error) {
+      addToast(error.message, "error");
+      setResult(null);
+    } finally {
       setIsAnalyzing(false);
-    }, delay);
+    }
   };
 
   const extractFrames = async () => {

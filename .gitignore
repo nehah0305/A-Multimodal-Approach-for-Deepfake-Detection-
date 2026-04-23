@@ -3,6 +3,13 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Python virtual environments
+.venv/
+venv/
+env/
 
 # Node artifacts
 node_modules/
@@ -31,3 +38,17 @@ Thumbs.db
 
 # Large datasets
 FaceForensic Dataset/
+
+# ML pipeline generated artifacts
+ml_pipeline/preprocessed/
+ml_pipeline/logs/
+ml_pipeline/data/*_preprocessed.csv
+ml_pipeline/models/*.pt
+ml_pipeline/models/*.pth
+ml_pipeline/models/*.ckpt
+ml_pipeline/models/*.onnx
+ml_pipeline/models/*.bin
+ml_pipeline/models/*.safetensors
+ml_pipeline/models/train_history.json
+ml_pipeline/models/test_metrics.json
+ml_pipeline/models/threshold_tuning.json

@@ -9,6 +9,8 @@ import mimetypes
 import subprocess
 import shutil
 
+from inference_service import analyze_video
+
 app = Flask(__name__)
 CORS(app)
 
@@ -435,30 +437,24 @@ def get_file(file_type, filename):
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_files():
-    """Analyze uploaded files (placeholder for ML model integration)"""
+    """Analyze uploaded video using the trained baseline model."""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         video_file = data.get('video')
-        audio_file = data.get('audio')
-        
-        if not video_file and not audio_file:
-            return jsonify({'error': 'No files to analyze'}), 400
-        
-        # This is a placeholder for actual ML model integration
-        # You can integrate your deepfake detection model here
-        results = {
-            'status': 'analyzing',
-            'files_analyzed': {
-                'video': video_file,
-                'audio': audio_file
-            },
-            'timestamp': datetime.now().isoformat()
-        }
-        
+
+        if not video_file:
+            return jsonify({'error': 'A video file is required for analysis'}), 400
+
+        video_path = os.path.join(app.config['UPLOAD_FOLDER'], 'videos', video_file)
+        if not os.path.exists(video_path):
+            return jsonify({'error': 'Uploaded video was not found on the server'}), 404
+
+        results = analyze_video(video_path)
+
         return jsonify({
             'success': True,
-            'message': 'Analysis started',
-            'analysis': results
+            'message': 'Analysis completed',
+            'analysis': results['analysis']
         }), 200
     
     except Exception as e:

@@ -19,9 +19,11 @@ TEST_SPLIT = DATA_DIR / "test_split.csv"
 
 # Preprocessing
 FRAME_SAMPLING_FPS = 8  # Sample 8 frames per second
-FRAME_SIZE = (384, 384)  # Input size for model
+FRAME_SIZE = (224, 224)  # Input size for model
+NUM_FRAMES_PER_VIDEO = 24
 BATCH_SIZE = 16
-NUM_WORKERS = 4
+NUM_WORKERS = 0
+RANDOM_SEED = 42
 
 # Training
 EPOCHS = 50
@@ -38,6 +40,3 @@ PRETRAINED = True
 # Inference
 CONFIDENCE_THRESHOLD = 0.5
 MIN_FRAMES_TO_ANALYZE = 4
-
-print(f"Dataset root: {DATASET_ROOT}")
-print(f"Pipeline root: {PIPELINE_ROOT}")
