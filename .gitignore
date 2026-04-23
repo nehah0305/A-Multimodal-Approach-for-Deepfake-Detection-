@@ -28,3 +28,6 @@ uploads/**
 Thumbs.db
 .vscode/
 .idea/
+
+# Large datasets
+FaceForensic Dataset/
