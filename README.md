@@ -1,140 +1,105 @@
 # Deepfake Detection Dashboard (React + Flask)
 
-This project is now fully converted to a React frontend (Vite) with a Flask backend API for video/audio upload.
+This project has a React frontend (Vite) and a Flask backend API for uploading media and running deepfake-analysis workflows.
 
-## Stack
+## Goal
+
+After cloning, anyone should be able to run the project with one command.
+
+## Tech Stack
 
 - Frontend: React 18 + Vite
 - Backend: Flask
-- API: REST endpoints under /api
+- API Base: `http://localhost:5000/api`
 
-## Project Structure
+## Prerequisites
 
-```
-A-Multimodal-Approach-for-Deepfake-Detection-/
-├── index.html
-├── package.json
-├── vite.config.js
-├── src/
-│   ├── App.jsx
-│   ├── App.css
-│   ├── main.jsx
-│   └── index.css
-├── app.py
-├── requirements.txt
-├── start-server.bat
-├── API_DOCS.md
-└── test_api.py
-```
+- Python 3.8+
+- Node.js 18+
+- npm
+- Optional: FFmpeg (required only for frame extraction endpoint)
 
-## Run Backend
+## Quick Start (Recommended)
 
-1. Install Python dependencies:
+### Windows
 
 ```powershell
-pip install -r requirements.txt
+git clone <repo-url>
+cd A-Multimodal-Approach-for-Deepfake-Detection-
+python run_project.py
 ```
 
-2. Start Flask API:
+or double-click:
 
 ```powershell
-python app.py
+start-server.bat
 ```
 
-Backend runs at http://localhost:5000.
+### macOS/Linux
 
-## Run Frontend
-
-1. Install Node dependencies:
-
-```powershell
-npm install
+```bash
+git clone <repo-url>
+cd A-Multimodal-Approach-for-Deepfake-Detection-
+python3 run_project.py
 ```
 
-2. Start React dev server:
+or:
 
-```powershell
-npm run dev
+```bash
+chmod +x start-project.sh
+./start-project.sh
 ```
 
-Frontend runs at http://localhost:5173.
+The launcher will:
 
-## Environment (Optional)
+1. Verify prerequisites
+2. Install Python dependencies from `requirements.txt`
+3. Install Node dependencies from `package.json`
+4. Start backend on `http://localhost:5000`
+5. Start frontend on `http://localhost:5173`
 
-To change API URL, set VITE_API_URL in a .env file:
+Press `Ctrl+C` to stop both services.
 
-```
+## Optional Environment Configuration
+
+Copy `.env.example` to `.env` and edit if needed:
+
+```bash
 VITE_API_URL=http://localhost:5000/api
 ```
 
-## Features
-
-- Separate video and audio upload zones
-- File validation (format and max 100MB)
-- Upload/delete via Flask API
-- Simulated analysis result cards
-- Downloadable report
-
-## API
-
-Core endpoints used by React:
-
-- GET /api/health
-- POST /api/upload/video
-- POST /api/upload/audio
-- POST /api/files/delete
-
-See [API_DOCS.md](API_DOCS.md) for full backend endpoint details.
-   - Rate limiting and API keys
-   - Production-grade deployment
-
-4. **Monitoring**
-   - Analysis metrics dashboard
-   - Performance statistics
-   - Error tracking and logging
-
-## 📊 Technology Stack
-
-**Frontend:**
-- HTML5
-- CSS3 (Responsive Design)
-- Vanilla JavaScript (ES6+)
-
-**Backend:**
-- Python 3.8+
-- Flask 2.3.3
-- Flask-CORS
-- Werkzeug
-
-## 📝 License
-
-This project is part of the Multimodal Approach for Deepfake Detection research.
-
-## 👥 Support & Contribution
-
-For issues, suggestions, or improvements:
-1. Review the [SETUP.md](SETUP.md) guide
-2. Check [API_DOCS.md](API_DOCS.md) for API details
-3. Run [test_api.py](test_api.py) to verify setup
-4. Contact the development team
-
-## 🎬 Getting Started
+## Manual Start (If Needed)
 
 ```bash
-# 1. Install dependencies
 pip install -r requirements.txt
-
-# 2. Start server
+npm install
 python app.py
-
-# 3. Open browser and navigate to index.html
-
-# 4. Start analyzing!
 ```
 
----
+In a second terminal:
 
-**Happy Detecting! 🎬🔍**
+```bash
+npm run dev
+```
 
-For detailed setup instructions, see [SETUP.md](SETUP.md)  
-For API documentation, see [API_DOCS.md](API_DOCS.md)
+## API and Testing
+
+- API reference: `API_DOCS.md`
+- Basic API verification script: `test_api.py`
+
+Run API tests after the backend is running:
+
+```bash
+python test_api.py
+```
+
+## Troubleshooting
+
+- `python` not found:
+   - Windows: install Python and enable "Add Python to PATH"
+   - macOS/Linux: use `python3`
+- `npm` not found: install Node.js 18+
+- Port already in use:
+   - Backend default: `5000`
+   - Frontend default: `5173`
+- Frame extraction fails: install FFmpeg and ensure it is available in PATH

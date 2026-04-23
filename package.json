@@ -7,7 +7,9 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup:all": "python run_project.py --setup-only",
+    "start:all": "python run_project.py --skip-install"
   },
   "dependencies": {
     "jspdf": "^4.2.1",
