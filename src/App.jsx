@@ -8,64 +8,35 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const videoMimeTypes = ["video/mp4", "video/x-msvideo", "video/quicktime", "video/x-ms-wmv"];
 const audioMimeTypes = ["audio/wav", "audio/mpeg", "audio/mp4", "audio/flac"];
 
-function randomResult() {
-  const isAuthentic = Math.random() > 0.3;
-  const authenticScore = isAuthentic
-    ? Math.floor(Math.random() * 30) + 75
-    : Math.floor(Math.random() * 40) + 20;
-  const confidenceLevel = Math.floor(Math.random() * 25) + 75;
-  const facialScore = Math.floor(Math.random() * 35) + (isAuthentic ? 60 : 20);
-  const audioScore = Math.floor(Math.random() * 35) + (isAuthentic ? 62 : 18);
-  const temporalScore = Math.floor(Math.random() * 35) + (isAuthentic ? 58 : 18);
-  const artifactScore = Math.floor(Math.random() * 35) + (isAuthentic ? 61 : 15);
-  const authenticityRisk = isAuthentic ? Math.floor(Math.random() * 24) + 8 : Math.floor(Math.random() * 32) + 42;
-
-  const findings = isAuthentic
-    ? [
-        "No strong cross-modal mismatch detected.",
-        "Frame consistency remains stable across the sampled sequence.",
-        "Audio characteristics appear aligned with the visual timeline."
-      ]
-    : [
-        "Temporal irregularities suggest possible generated or altered frames.",
-        "Audio-visual mismatch detected in one or more sampled segments.",
-        "Artifacts and compression anomalies are above the expected baseline."
-      ];
-
-  const recommendations = isAuthentic
-    ? [
-        "Proceed with standard review workflow.",
-        "Archive the analysis report for audit tracking.",
-        "Re-run at higher FPS only if finer inspection is required."
-      ]
-    : [
-        "Escalate the asset for manual review.",
-        "Extract frames at higher FPS for segment-level inspection.",
-        "Cross-check the source file chain and submission metadata."
-      ];
-
+function normalizeAnalysis(raw) {
+  const analysis = raw || {};
   return {
-    isAuthentic,
-    authenticScore,
-    confidenceLevel,
-    riskLevel: authenticityRisk,
-    subScores: {
-      facial: facialScore,
-      audio: audioScore,
-      temporal: temporalScore,
-      artifacts: artifactScore
-    },
+    ...analysis,
+    authenticScore: analysis.authenticScore ?? 0,
+    confidenceLevel: analysis.confidenceLevel ?? 0,
+    riskLevel: analysis.riskLevel ?? 0,
+    isAuthentic: analysis.isAuthentic ?? false,
+    label: analysis.label ?? (analysis.isAuthentic ? "REAL" : "FAKE"),
+    threshold: analysis.threshold ?? null,
+    probability_fake: analysis.probability_fake ?? null,
+    probability_real: analysis.probability_real ?? null,
+    modelVersion: analysis.modelVersion ?? "baseline",
+    checkpoint_epoch: analysis.checkpoint_epoch ?? null,
     detections: {
-      facial: isAuthentic ? Math.random() > 0.2 : Math.random() > 0.7,
-      audio: isAuthentic ? Math.random() > 0.2 : Math.random() > 0.7,
-      temporal: isAuthentic ? Math.random() > 0.2 : Math.random() > 0.7,
-      artifacts: isAuthentic ? Math.random() > 0.2 : Math.random() > 0.7
+      facial: analysis.detections?.facial ?? false,
+      audio: analysis.detections?.audio ?? false,
+      temporal: analysis.detections?.temporal ?? false,
+      artifacts: analysis.detections?.artifacts ?? false
     },
-    findings,
-    recommendations,
-    summary: isAuthentic
-      ? "The sample appears coherent across video and audio channels with no dominant indicators of manipulation."
-      : "Multiple detection signals point to possible manipulation. A human review is recommended before acceptance."
+    subScores: {
+      facial: analysis.subScores?.facial ?? 0,
+      audio: analysis.subScores?.audio ?? 0,
+      temporal: analysis.subScores?.temporal ?? 0,
+      artifacts: analysis.subScores?.artifacts ?? 0
+    },
+    findings: analysis.findings ?? [],
+    recommendations: analysis.recommendations ?? [],
+    summary: analysis.summary ?? "No summary available."
   };
 }
 
@@ -299,7 +270,7 @@ export default function App() {
         throw new Error(data.error || "Failed to analyze media");
       }
 
-      setResult(data.analysis);
+      setResult(normalizeAnalysis(data.analysis));
       addToast("Analysis completed successfully", "success");
     } catch (error) {
       addToast(error.message, "error");
@@ -946,6 +917,12 @@ export default function App() {
                       This deepfake detection analysis was performed using multi-modal signals from uploaded media.
                     </p>
                     <ul>
+                      <li>Model Label: {result.label}</li>
+                      <li>Model Version: {result.modelVersion}</li>
+                      <li>Decision Threshold: {result.threshold ?? "N/A"}</li>
+                      <li>Fake Probability: {result.probability_fake ?? "N/A"}</li>
+                      <li>Real Probability: {result.probability_real ?? "N/A"}</li>
+                      <li>Checkpoint Epoch: {result.checkpoint_epoch ?? "N/A"}</li>
                       <li>Authenticity Score: {result.authenticScore}%</li>
                       <li>Analysis Confidence: {result.confidenceLevel}%</li>
                       <li>
