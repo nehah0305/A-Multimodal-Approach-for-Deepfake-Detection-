@@ -2,7 +2,7 @@ Flask==2.3.3
 Flask-CORS==4.0.0
 Werkzeug==2.3.7
 requests==2.32.3
-numpy==1.24.3
-torch==2.0.1
-torchvision==0.15.2
+numpy==1.26.4
+torch==2.11.0
+torchvision==0.26.0
 opencv-python==4.8.0.76
