@@ -7,7 +7,7 @@ import json
 
 import numpy as np
 import torch
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader
 
 from config import DATA_DIR, MODELS_DIR, NUM_WORKERS, RANDOM_SEED
@@ -23,17 +23,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--start", type=float, default=0.1)
     parser.add_argument("--end", type=float, default=0.9)
     parser.add_argument("--step", type=float, default=0.02)
+    parser.add_argument(
+        "--objective",
+        type=str,
+        default="f1",
+        choices=["f1", "balanced_accuracy", "macro_f1", "min_recall"],
+        help="Metric used to select the best threshold",
+    )
     return parser.parse_args()
 
 
 def evaluate_at_threshold(y_true: np.ndarray, y_prob: np.ndarray, threshold: float) -> dict:
     y_pred = (y_prob >= threshold).astype(np.int32)
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+
+    recall_fake = float(recall_score(y_true, y_pred, zero_division=0))
+    recall_real = float(tn / (tn + fp)) if (tn + fp) > 0 else 0.0
+    balanced_accuracy = float((recall_real + recall_fake) / 2.0)
+
     return {
         "threshold": float(threshold),
         "accuracy": float(accuracy_score(y_true, y_pred)),
         "precision": float(precision_score(y_true, y_pred, zero_division=0)),
-        "recall": float(recall_score(y_true, y_pred, zero_division=0)),
+        "recall": recall_fake,
+        "recall_fake": recall_fake,
+        "recall_real": recall_real,
         "f1": float(f1_score(y_true, y_pred, zero_division=0)),
+        "macro_f1": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
+        "balanced_accuracy": balanced_accuracy,
+        "confusion_matrix": [[int(tn), int(fp)], [int(fn), int(tp)]],
     }
 
 
@@ -90,12 +108,20 @@ def main() -> None:
 
     thresholds = np.arange(args.start, args.end + 1e-9, args.step)
     results = [evaluate_at_threshold(y_true_arr, y_prob_arr, t) for t in thresholds]
-    best = max(results, key=lambda x: x["f1"])
+
+    if args.objective == "min_recall":
+        best = max(
+            results,
+            key=lambda x: (min(x["recall_real"], x["recall_fake"]), x["macro_f1"], x["accuracy"]),
+        )
+    else:
+        best = max(results, key=lambda x: (x[args.objective], x["macro_f1"], x["accuracy"]))
 
     print("Best threshold on validation split:")
     print(json.dumps(best, indent=2))
 
     out = {
+        "objective": args.objective,
         "best": best,
         "all": results,
     }

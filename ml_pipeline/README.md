@@ -101,9 +101,18 @@ python preprocess_videos.py --split test --max-videos 20
 python train_baseline.py
 ```
 
+Faster run (good for iteration/debug):
+
+```bash
+python train_baseline.py --fast
+```
+
+`--fast` uses a smaller subset, fewer epochs, capped batches per epoch, and early stopping.
+This greatly reduces runtime, but final accuracy may be lower than full training.
+
 Artifacts:
-- `models/best_baseline.pt`
-- `models/train_history.json`
+- `models/best_baseline.pt` (generated after training)
+- `models/train_history.json` (generated after training)
 
 ### 3) Evaluate on held-out test set
 
@@ -112,7 +121,7 @@ python evaluate_model.py
 ```
 
 Artifacts:
-- `models/test_metrics.json`
+- `models/test_metrics.json` (generated after evaluation)
 
 ### 4) Predict one video (manual check)
 

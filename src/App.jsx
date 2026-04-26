@@ -918,11 +918,9 @@ export default function App() {
                     </p>
                     <ul>
                       <li>Model Label: {result.label}</li>
-                      <li>Model Version: {result.modelVersion}</li>
                       <li>Decision Threshold: {result.threshold ?? "N/A"}</li>
                       <li>Fake Probability: {result.probability_fake ?? "N/A"}</li>
                       <li>Real Probability: {result.probability_real ?? "N/A"}</li>
-                      <li>Checkpoint Epoch: {result.checkpoint_epoch ?? "N/A"}</li>
                       <li>Authenticity Score: {result.authenticScore}%</li>
                       <li>Analysis Confidence: {result.confidenceLevel}%</li>
                       <li>

@@ -35,6 +35,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE, help="Batch size")
     parser.add_argument("--num-workers", type=int, default=NUM_WORKERS, help="DataLoader workers")
     parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Enable faster training defaults (fewer epochs, subset, larger batch, early stop)",
+    )
+    parser.add_argument(
         "--subset-size",
         type=int,
         default=None,
@@ -45,6 +50,30 @@ def parse_args() -> argparse.Namespace:
         choices=["ratio", "balanced"],
         default="balanced",
         help="Subset strategy: keep original ratio or enforce real/fake balance",
+    )
+    parser.add_argument(
+        "--max-train-batches",
+        type=int,
+        default=None,
+        help="Optional cap on train batches per epoch for faster runs",
+    )
+    parser.add_argument(
+        "--max-val-batches",
+        type=int,
+        default=None,
+        help="Optional cap on validation batches per epoch for faster runs",
+    )
+    parser.add_argument(
+        "--early-stop-patience",
+        type=int,
+        default=None,
+        help="Stop if val AUC does not improve for N epochs",
+    )
+    parser.add_argument(
+        "--min-epochs",
+        type=int,
+        default=3,
+        help="Minimum epochs before early stopping can trigger",
     )
     return parser.parse_args()
 
@@ -150,7 +179,7 @@ def compute_metrics(y_true: np.ndarray, y_prob: np.ndarray, threshold: float = 0
     return metrics
 
 
-def run_epoch(model, loader, criterion, optimizer, device, train: bool):
+def run_epoch(model, loader, criterion, optimizer, device, train: bool, max_batches: int | None = None):
     if train:
         model.train()
     else:
@@ -159,9 +188,13 @@ def run_epoch(model, loader, criterion, optimizer, device, train: bool):
     total_loss = 0.0
     all_labels = []
     all_probs = []
+    seen_samples = 0
 
     with torch.set_grad_enabled(train):
-        for frames, labels in loader:
+        for batch_idx, (frames, labels) in enumerate(loader):
+            if max_batches is not None and batch_idx >= max_batches:
+                break
+
             frames = frames.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
 
@@ -175,10 +208,11 @@ def run_epoch(model, loader, criterion, optimizer, device, train: bool):
 
             probs = torch.sigmoid(logits)
             total_loss += loss.item() * labels.size(0)
+            seen_samples += labels.size(0)
             all_labels.extend(labels.detach().cpu().numpy().tolist())
             all_probs.extend(probs.detach().cpu().numpy().tolist())
 
-    avg_loss = total_loss / max(len(loader.dataset), 1)
+    avg_loss = total_loss / max(seen_samples, 1)
     metrics = compute_metrics(np.array(all_labels), np.array(all_probs))
     metrics["loss"] = float(avg_loss)
     return metrics
@@ -187,6 +221,29 @@ def run_epoch(model, loader, criterion, optimizer, device, train: bool):
 def main() -> None:
     args = parse_args()
     set_seed(RANDOM_SEED)
+
+    if args.fast:
+        if args.epochs == EPOCHS:
+            args.epochs = 10
+        if args.batch_size == BATCH_SIZE:
+            args.batch_size = 32
+        if args.num_workers == NUM_WORKERS:
+            args.num_workers = 2
+        if args.subset_size is None:
+            args.subset_size = 1200
+        if args.max_train_batches is None:
+            args.max_train_batches = 120
+        if args.max_val_batches is None:
+            args.max_val_batches = 30
+        if args.early_stop_patience is None:
+            args.early_stop_patience = 3
+
+        print(
+            "Fast mode enabled: "
+            f"epochs={args.epochs}, batch_size={args.batch_size}, num_workers={args.num_workers}, "
+            f"subset_size={args.subset_size}, max_train_batches={args.max_train_batches}, "
+            f"max_val_batches={args.max_val_batches}, early_stop_patience={args.early_stop_patience}"
+        )
 
     train_csv = DATA_DIR / "train_preprocessed.csv"
     val_csv = DATA_DIR / "val_preprocessed.csv"
@@ -213,16 +270,21 @@ def main() -> None:
 
         print(f"Using subset: train={len(train_ds)} val={len(val_ds)}")
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    pin_memory = device.type == "cuda"
+
     val_loader = DataLoader(
         val_ds,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
-        pin_memory=True,
+        pin_memory=pin_memory,
+        persistent_workers=args.num_workers > 0,
     )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True
 
     model = DeepfakeBaselineModel(backbone=MODEL_BACKBONE, pretrained=PRETRAINED).to(device)
 
@@ -258,7 +320,8 @@ def main() -> None:
         batch_size=args.batch_size,
         sampler=weighted_sampler,
         num_workers=args.num_workers,
-        pin_memory=True,
+        pin_memory=pin_memory,
+        persistent_workers=args.num_workers > 0,
     )
 
     pos_weight = torch.tensor([pos_weight_value], dtype=torch.float32, device=device)
@@ -268,10 +331,27 @@ def main() -> None:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     best_auc = -1.0
     history = []
+    patience_count = 0
 
     for epoch in range(1, args.epochs + 1):
-        train_metrics = run_epoch(model, train_loader, criterion, optimizer, device, train=True)
-        val_metrics = run_epoch(model, val_loader, criterion, optimizer, device, train=False)
+        train_metrics = run_epoch(
+            model,
+            train_loader,
+            criterion,
+            optimizer,
+            device,
+            train=True,
+            max_batches=args.max_train_batches,
+        )
+        val_metrics = run_epoch(
+            model,
+            val_loader,
+            criterion,
+            optimizer,
+            device,
+            train=False,
+            max_batches=args.max_val_batches,
+        )
 
         epoch_log = {
             "epoch": epoch,
@@ -288,6 +368,7 @@ def main() -> None:
 
         if val_metrics["auc"] > best_auc:
             best_auc = val_metrics["auc"]
+            patience_count = 0
             checkpoint = {
                 "model_state_dict": model.state_dict(),
                 "epoch": epoch,
@@ -296,6 +377,19 @@ def main() -> None:
             }
             torch.save(checkpoint, MODELS_DIR / "best_baseline.pt")
             print(f"  Saved new best model (val_auc={best_auc:.4f})")
+        else:
+            patience_count += 1
+
+        if (
+            args.early_stop_patience is not None
+            and epoch >= max(args.min_epochs, 1)
+            and patience_count >= args.early_stop_patience
+        ):
+            print(
+                "Early stopping triggered: "
+                f"no val AUC improvement for {args.early_stop_patience} epoch(s)."
+            )
+            break
 
     with open(MODELS_DIR / "train_history.json", "w", encoding="utf-8") as f:
         json.dump(history, f, indent=2)
